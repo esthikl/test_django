@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
+import re
+import socket
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,6 +28,10 @@ SECRET_KEY = 'rh2cynsps7=3fb-bmb!+6g(!a(j5i3dq54ps08y2^py8z*49ct'
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# Development or Production
+r = re.search(r'^172.17', socket.gethostbyname(socket.gethostname()))
+DEVELOPMENT = (r == None)
 
 
 # Application definition
@@ -74,12 +80,27 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+if DEVELOPMENT:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'django-app',
+            'USER': 'django-app',
+            'PASSWORD': '*******',
+            'HOST': 'mysql',
+            'PORT': '3306',
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+            },
+        }
+    }
 
 
 # Password validation
@@ -120,3 +141,27 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+# Konfiguration des Auth-Systems
+
+LDAP_DOMAIN = 'ADS1'
+LDAP_SERVER = 'gso1.ads1.fh-nuernberg.de'
+
+if DEVELOPMENT:
+    LOGIN_REDIRECT_URL = '/'
+    LOGOUT_REDIRECT_URL = '/'
+    LOGIN_URL = "/accounts/login/"
+else:
+    LOGIN_REDIRECT_URL = '/app/'
+    LOGOUT_REDIRECT_URL = '/app/'
+    LOGIN_URL = "/app/accounts/login/"
+
+if DEVELOPMENT:
+    AUTHENTICATION_BACKENDS = [
+        'django.contrib.auth.backends.ModelBackend',
+    ]
+else:
+    AUTHENTICATION_BACKENDS = [
+        'django.contrib.auth.backends.ModelBackend',
+        'medinf.ldap_backend.LdapBackend',
+    ]
